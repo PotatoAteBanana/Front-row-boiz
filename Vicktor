@@ -9,8 +9,10 @@ for (p in mypackages){
   }
 }
 
-controls <- read_csv("D:ADA/Controls.csv")
-cases <- read_csv("D:ADA/cases.csv", col_names=names(controls))
+setwd("D:/ADA")
+
+controls <- read_csv("controls.csv")
+cases <- read_csv("cases.csv", col_names=names(controls))
 
 #cases <- mutate(cases, menop = as.numeric(menop))
 
@@ -47,4 +49,15 @@ controls <- controls %>%
 
 #create a variable with age in categories
 controls <- controls %>%
-  mutate(age_gp = cut(age, breaks = c(10,30,40,50,60,80,Inf), labels=FALSE, right=FALSE))
+  mutate(age_gp = cut(age, breaks = c(10,20,30,40,50,60,80,Inf), labels=FALSE, right=FALSE))
+
+controls$age[78:80] > 60
+
+#pop_8017 <- pop_7117 %>% filter(year>1979)
+
+#controls_sub = select(controls, case_con, age, menop, pufa, everything())
+#this moves pufa to the fourth and everything else is the same
+
+brca = read_csv("brca_incidence_2004_17.xlsx")
+brca_sub = brca %>% select(-"Grand Total")
+
