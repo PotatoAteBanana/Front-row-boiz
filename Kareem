@@ -1,5 +1,7 @@
 mypackages <- c("tidyverse", "readxl", "Hmisc")
 
+
+
 for (p in mypackages){
   if (!require(p, character.only = TRUE)) {
     install.packages(p)
@@ -7,15 +9,15 @@ for (p in mypackages){
   }
 }
 
+controls <- read_csv("D:ADA/Controls.csv")
+cases <- read_csv("D:ADA/cases.csv")
 
-controls <-read.csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/controls.csv")
-cases <-read.csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv")
+con_names <- names(controls)
 
-names(controls)
-names(cases)
+#specification: character is string. double is number, when combine use bind_rows(table1, table2)
+#MAKE SURE the col names are the same
 
+colnames(cases) <- c(con_names)
 
+View(cases)
 
-names(cases) <- names(controls)
-
-names(cases)
