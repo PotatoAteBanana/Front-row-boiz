@@ -8,14 +8,10 @@ for (p in mypackages){
 }
 
 controls <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/controls.csv")
-cases <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv")
+cases <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv", col_names = FALSE)
 
-con_names <- names(controls)
+names(cases) <- names(controls)
 
-colnames(cases) <- c(con_names)
-
-names(cases)
-
-pop_7117 <- bind_rows(cases, controls)
+pop_7117 <- rbind(cases, controls)
 
 pop_7117
