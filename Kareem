@@ -1,1 +1,21 @@
-#Lecture code
+mypackages <- c("tidyverse", "readxl", "Hmisc")
+
+for (p in mypackages){
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+
+
+controls <-read.csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/controls.csv")
+cases <-read.csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv")
+
+names(controls)
+names(cases)
+
+
+
+names(cases) <- names(controls)
+
+names(cases)
