@@ -1,1 +1,19 @@
+mypackages <- c("tidyverse", "readxl", "Hmisc")
+
+for (p in mypackages){
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+
+controls <- read_csv("D:ADA/Controls.csv")
+cases <- read_csv("D:ADA/cases.csv")
+
+con_names <- names(controls)
+
+colnames(cases) <- c(con_names)
+
+View(cases)
+
 
