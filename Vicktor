@@ -22,18 +22,24 @@ cases <- mutate(cases,
 
 count(cases, menop) > count(controls, menop)
 
+#%>% is read as "then"
+
+
+
 #specification: character is string. double is number, when combine use bind_rows(table1, table2)
 #MAKE SURE the col names are the same
 #or just in cases: col_names=FALSE, and names(cases)=names(controls)
 
 pop_7117 <- rbind(controls, cases)
 
-#%>% is read as "then"
 
-pop_7117
+controls = mutate(controls,
+                  fa = pufa +sfa)
 
-count(pop_7117, menop)
+#controls <-controls %>%
+ # bind_rows(cases)
+  #mutate(fa=pufa+sfa) %>%
+  #rename (fatty_acid = fa)
 
-pop_7117 = mutate(pop_7117,
-                  fa = pufa +sfa,
-                  log_fa = log(fa))
+controls <- controls %>%
+  rename(fatty_acids = fa)
