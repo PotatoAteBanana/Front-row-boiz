@@ -1,5 +1,7 @@
 mypackages <- c("tidyverse", "readxl", "Hmisc")
 
+
+
 for (p in mypackages){
   if (!require(p, character.only = TRUE)) {
     install.packages(p)
@@ -7,48 +9,42 @@ for (p in mypackages){
   }
 }
 
-controls <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/controls.csv")
-cases <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv", col_names = FALSE)
+controls <- read_csv("D:ADA/Controls.csv")
+cases <- read_csv("D:ADA/cases.csv", col_names=names(controls))
 
-names(cases) <- names(controls)
+#cases <- mutate(cases, menop = as.numeric(menop))
 
-#pop_7117 <- bind_rows(cases, controls) -- Won't merge
-pop_7117 <- rbind(cases, controls) #turns menop into a char, so you cant sum
-
-pop_7117
-
-pop_0417 <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/pop_ea_200417.csv")
-
-count(cases, menop)
-
-#cases <- mutate(cases, menop = as.numeric(menop)) # wont work as there is some Y and N
-cases <- mutate(cases, menop = case_when(menop=="N" ~"1", #IN mathematical sense u need double equal
-                                          menop=="Y" ~"2",
-                                          TRUE ~menop), #KEEP EVERYTHING ELSE SAME, THIS LINE ALWAYS THERE
+cases <- mutate(cases, 
+                menop = case_when(menop=="N" ~ "1",
+                                  menop=="Y" ~ "2",
+                                  TRUE ~ menop),
                 menop = as.numeric(menop))
 
-count(cases, menop)
-count(controls, menop)
 count(cases, menop) > count(controls, menop)
 
-controls <- mutate(controls, fa = pufa + sfa,
-                   log_fa = log(fa))
+#%>% is read as "then"
+
+
+
+#specification: character is string. double is number, when combine use bind_rows(table1, table2)
+#MAKE SURE the col names are the same
+#or just in cases: col_names=FALSE, and names(cases)=names(controls)
+
+pop_7117 <- rbind(controls, cases)
+
+
+controls = mutate(controls,
+                  fa = pufa +sfa)
+
+#controls <-controls %>%
+ # bind_rows(cases)
+  #mutate(fa=pufa+sfa) %>%
+  #rename (fatty_acid = fa)
 
 controls <- controls %>%
   rename(fatty_acids = fa)
-controls  
-#rename(fatty = fa) #new name = old name, weird order
-
-#case_con <- controls %>%
-  #bind_rows(cases)
-  #mutate(fa = pufa + sfa) %>%
-  #rename(fatty_acids = fa) 
 
 
+#create a variable with age in categories
 controls <- controls %>%
-  mutate(age_gp = cut(age, breaks = c(10, 20 , 30 , 40, 50, 60 ,80, Inf),
-                      labels = FALSE,
-                      right = FALSE))
-
-table(controls$age, controls$age_gp)
-count(controls,age, age_gp)
+  mutate(age_gp = cut(age, breaks = c(10,30,40,50,60,80,Inf), labels=FALSE, right=FALSE))
