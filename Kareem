@@ -12,6 +12,23 @@ cases <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R progra
 
 names(cases) <- names(controls)
 
-pop_7117 <- rbind(cases, controls)
+#pop_7117 <- bind_rows(cases, controls) -- Won't merge
+pop_7117 <- rbind(cases, controls) #turns menop into a char, so you cant sum
 
 pop_7117
+
+pop_0417 <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/pop_ea_200417.csv")
+
+count(cases, menop)
+
+#cases <- mutate(cases, menop = as.numeric(menop)) # wont work as there is some Y and N
+cases <- mutate(cases, menop = case_when(menop=="N" ~"1", #IN mathematical sense u need double equal
+                                          menop=="Y" ~"2",
+                                          TRUE ~menop), #KEEP EVERYTHING ELSE SAME, THIS LINE ALWAYS THERE
+                menop = as.numeric(menop))
+
+count(cases, menop)
+count(controls, menop)
+count(cases, menop) > count(controls, menop)
+
+
