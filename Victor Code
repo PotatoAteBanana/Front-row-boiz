@@ -36,26 +36,25 @@ tumour$date_of_diagnosis <- dmy(tumour$date_of_diagnosis)
 ## merge patient and tumour by patient_number to obtain brca information from 1971 to 2003
 brca_71_03 <- merge(tumour, patient)
 
-## calculate and round the ages of patients diagnosed from 1971-2003
+## calculate and round the ages of patients diagnosed from 1971-2003 using interval and floor function
 brca_71_03$age <- interval(brca_71_03$date_of_birth, brca_71_03$date_of_diagnosis) %>%
   as.numeric('years')
 brca_71_03$age <- floor(brca_71_03$age)
-#brca_71_03$age <- brca_71_03$date_of_diagnosis - brca_71_03$date_of_birth
-#brca_71_03$age <- floor(as.numeric((brca_71_03$age)/365.24))
-brca_71_03$age <- floor(brca_71_03$age)
 
-## assign patient to each age band
+## assign patient to each age band, with breaks. We do not include right since it's 0-4, 5-9, etc. Therefore right = FALSE
+## give each age band labels for merging later
 brca_71_03$age_band <- cut(brca_71_03$age, 
-                           breaks = c(0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,Inf), right = TRUE, 
+                           breaks = c(0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,Inf), right = FALSE, 
                            labels = c("0-4","5-9","10-14","15-19","20-24","25-29","30-34","35-39","40-44","45-49","50-54","55-59","60-64","65-69","70-74","75-79","80-84","85+"))
 
-## remove duplicate tumour cases
+## remove duplicate tumour cases, those with the same diagnosis date but different tumour numbers
+## arrange the date of diagnosis by the earliest and keep only the first one under an unique patient number
+## this way we remove the extra ones that is arranged after the first one
 brca_71_03 <- arrange(brca_71_03, date_of_diagnosis)
 brca_71_03 <- brca_71_03 %>% distinct(patient_number, .keep_all = TRUE)
 
 ## clean the data frame. Find diagnosed year from date and filter the ones after 1980
 brca_71_03$year <- year(brca_71_03$date_of_diagnosis)
-#names(brca_71_03)[3] <- "year"
 brca_71_03 <- filter(brca_71_03, year > 1979)
 
 ## remove date of birth since no longer needed
@@ -69,10 +68,9 @@ brca_04_17_long <- brca_incidence[,-16] %>%
 
 ## change the column label for consistency
 names(brca_04_17_long)[1] <- "age_band"
-brca_04_17_long <- brca_04_17_long[-c(267:280),]
 
-## remove duplicate tumour cases
-#brca_71_03  <- brca_71_03 %>% arrange() %>% group_by(date_of_diagnosis) %>% filter(row_number() == 1)
+## remove the grand total to have the same format when merging later
+brca_04_17_long <- brca_04_17_long[-c(267:280),]
 
 ## summarize incidence/frequency of each year and break down into each age band
 ## match the order of the data frame with the one from 2003-17, the one we earlier dealt with
@@ -88,7 +86,7 @@ brca_80_17 <- rbind(brca_80_03, brca_04_17_long)
 ###### start cleaning and merge sample population data
 
 ## filter out the female cases in sample population (east Anglia) from 1980-2003
-#keep the format between 1980-2003 and 2004-2017 data consistent
+## keep the format and column names between 1980-2003 and 2004-2017 data consistent
 population <- filter(population, year > 1979)
 population <- filter(population, sex == 2)
 population <- population[, c(1,3,4,2)]
@@ -106,6 +104,7 @@ brca_80_17$age_band <- recode_factor(brca_80_17$age_band, '0-4'="1", '5-9'="2", 
                                      '85-89'="18",'90+'="18")
 
 ## merge the east-Anglia population with brca_incidence, both complete and clean data from 1980-2017
+## change column names so there's the same criteria for merging
 ea_sample <- merge(brca_80_17, sample_pop, by = c("age_band", "year"))
 ea_sample <- as.data.table(ea_sample)[, sum(frequency), by = .(age_band, year, midyear_pop)]
 colnames(ea_sample) <- c("age_band", "year", "midyear_pop", "frequency")
@@ -127,7 +126,7 @@ cases_sample_pop <- merge(ea_sample, european_pop, by = "age_band")
 #################### PART 1: a) Estimate incidence & find confidence intervals
 
 ## estimate the incidence, standardized directly to the European population
-## sum up the age_band estimations yearly, since we want estimation 
+## sum up the age_band estimations (with data.table package) by year, so we no longer calculate in age bands
 cases_sample_pop$expected_cases <- (cases_sample_pop$frequency/cases_sample_pop$midyear_pop)*cases_sample_pop$europop
 yearly_estimates <- as.data.table(cases_sample_pop)[, sum(expected_cases), by = .(year)]
 colnames(yearly_estimates)[2] <- "yearly_estimated_incidence"
@@ -149,36 +148,48 @@ cases_sample_pop$variance <- ((cases_sample_pop$europop/100000)^2)* (cases_sampl
 yearly_var <- as.data.table(cases_sample_pop)[, sum(variance), by = .(year)]
 yearly_estimates$variance <- yearly_var$V1
 
-## calculate the yearly standard error based on yearly variances
+## calculate the yearly standard error based on yearly variances, still using the 100000 standard population base
 yearly_estimates$standard_error <- sqrt((yearly_estimates$variance))*100000
 
-## calculate the upper and lower ends for the 95% confidence interval, and also put in the data frame
+## calculate the upper and lower ends for the 95% confidence interval(z score is 1.96), and also put in the data frame
 yearly_estimates$upper_end <- yearly_estimates$yearly_estimated_incidence + 1.96*yearly_estimates$standard_error
 yearly_estimates$lower_end <- yearly_estimates$yearly_estimated_incidence - 1.96*yearly_estimates$standard_error
 
+# this data frame contains the point estimates standardized to 100000 European population, and the upper/lower intervals
 View(yearly_estimates)
 
 ## Format a table
-# export as csv, manually copy and paste, 
 
-## Plot the graph
-## omit half of the years appearing in the horizontal axis for simplicity and clarity
-## incidence rate but not incidence
-## age-adjusted breast cancer incidence rate per 100,000 standard population - yrs
-## the line of best fit would be the rate
 
+## use ggplot to plot the graph
+## here we choose the point graph with upper and lower intervals to better see the distribution across the time span -- years
+## adjust fonts and positions of plot title, axis title, axis text, etc.
 ggplot(yearly_estimates, aes(year, yearly_estimated_incidence)) +
   geom_point() +
   geom_errorbar(aes(ymin = lower_end, ymax = upper_end)) +
   theme_classic()+
-  labs(title="The Incidence Rate Estimates from Year 1980 to 2017\n-- directly Standardized to the Standard European Population ",x="Year",y="Breast Cancer incidence rate estimates in East-Anglia\nper 100000 standard population") +
+  labs(title="The Incidence Estimates from Year 1980 to 2017", subtitle = "Directly Standardized to the Standard European Population",x="Year",y="Breast Cancer incidence proportion estimates in East-Anglia\nper 100000 standard population") +
   theme(axis.text.x = element_text(size=12, angle=20)) +
   theme(axis.text.y = element_text(size=12)) +
   theme(axis.title = element_text(size=18)) +
   theme(plot.title = element_text(size=18)) +
-  theme(plot.title = element_text(size=38, hjust=0.5)) 
+  theme(plot.title = element_text(size=38, hjust=0.5)) +
+  theme(plot.subtitle = element_text(size=28, hjust=0.5)) 
 
 
+## alternatives 1 - bar chart
+yearly_estimates$year <- as.numeric(yearly_estimates$year)
+ggplot(yearly_estimates, aes(year, yearly_estimated_incidence)) +
+  geom_pointline() +
+  geom_errorbar(aes(ymin = lower_end, ymax = upper_end)) +
+  theme_classic()+
+  labs(title="The Incidence Estimates from Year 1980 to 2017", subtitle = "Directly Standardized to the Standard European Population",x="Year",y="Breast Cancer incidence proportion estimates in East-Anglia\nper 100000 standard population") +
+  theme(axis.text.x = element_text(size=12, angle=20)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(axis.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=38, hjust=0.5)) +
+  theme(plot.subtitle = element_text(size=28, hjust=0.5)) 
 
 
 
@@ -186,14 +197,23 @@ ggplot(yearly_estimates, aes(year, yearly_estimated_incidence)) +
 
 ############ PART 2
 
+## we create a new variable to store the full data frame (cases_sample_population)
 cases_sample_pop2 <- cases_sample_pop
+
+## filter out the age bands we need (20-59) and sum these by year
+## we obtain a new frame and rename the frequency column by the name frequency
 cases_20_49 <- filter(cases_sample_pop2, age_band %in% c(5,6,7,8,9,10))
 cases_20_49_yearly <- cases_20_49[, sum(frequency), by = .(year)]
 colnames(cases_20_49_yearly)[2] <- "frequency"
+
+## we do the same operations we did on frequency for midyear east-Anglian population
 cases_20_49_yearly_midyear_pop <- (cases_20_49[, sum(midyear_pop), by = .(year)])
 cases_20_49_yearly$midyear_pop <- cases_20_49_yearly_midyear_pop[,2]
+
+## use frequency/midyear population to obtain our results
 cases_20_49_yearly$incidence_estimate_1 <- cases_20_49_yearly$frequency/cases_20_49_yearly$midyear_pop*100000
 
+## almost the same as we did previously for the last age group, only with different filtered age bands
 cases_sample_pop3 <- cases_sample_pop
 cases_50_69 <- filter(cases_sample_pop3, age_band %in% c(11,12,13,14))
 cases_50_69_yearly <- cases_50_69[, sum(frequency), by = .(year)]
@@ -202,6 +222,7 @@ cases_50_69_yearly_midyear_pop <- (cases_50_69[, sum(midyear_pop), by = .(year)]
 cases_50_69_yearly$midyear_pop <- cases_50_69_yearly_midyear_pop[,2]
 cases_50_69_yearly$incidence_estimate_2 <- cases_50_69_yearly$frequency/cases_50_69_yearly$midyear_pop*100000
 
+## almost the same as we did previously for the last age group, only with different filtered age bands
 cases_sample_pop4 <- cases_sample_pop
 cases_70_inf <- filter(cases_sample_pop4, age_band %in% c(15,16,17,18))
 cases_70_inf_yearly <- cases_70_inf[, sum(frequency), by = .(year)]
@@ -210,16 +231,18 @@ cases_70_inf_yearly_midyear_pop <- (cases_70_inf[, sum(midyear_pop), by = .(year
 cases_70_inf_yearly$midyear_pop <- cases_70_inf_yearly_midyear_pop[,2]
 cases_70_inf_yearly$incidence_estimate_3 <- cases_70_inf_yearly$frequency/cases_70_inf_yearly$midyear_pop*100000
 
+## we create 3 new frames to store only the ear and incidence estimates in each age group
 cases_20_49_yearly <- cases_20_49_yearly %>% select(year, incidence_estimate_1)
 cases_50_69_yearly <- cases_50_69_yearly %>% select(year, incidence_estimate_2)
 cases_70_inf_yearly <- cases_70_inf_yearly %>% select(year, incidence_estimate_3)
 
+## we merge the 3 varaibles together to obtain our results and rename the columns for clarity
 merged <- merge(cases_20_49_yearly, cases_50_69_yearly) %>% merge(cases_70_inf_yearly)
-colnames(merged) <- c("year","20-49","50-69","70")
+colnames(merged) <- c("year","20-49","50-69","70+")
 View(merged)
 
 ## Format a table
-# export as csv, manually copy and paste, 
+
 
 ## Plot the graph
 ## omit half of the years appearing in the horizontal axis for simplicity and clarity
@@ -227,15 +250,45 @@ View(merged)
 ## age-adjusted breast cancer incidence rate per 100,000 standard population - yrs
 ## the line of best fit would be the rate
 
-
-merged_long <- merged %>% pivot_longer(cols = `20-49`:`70`, names_to = "agebands", values_to = "incidence")
+## convert the table to long formate, with year and incidences, and a third column age groups that work as an indicator
+## make sure the years are numeric values, prepare for plotting
+merged_long <- merged %>% pivot_longer(cols = `20-49`:`70+`, names_to = "Age Groups", values_to = "incidence")
 merged_long <- as.data.frame(merged_long)
-ggplot(merged_long,aes(x=year, y=incidence, colour=agebands))+
-  geom_point(aes(x=year, y=incidence, colour=agebands))+
+merged_long[,1] <- as.numeric(merged_long[,1])
+
+## use ggplot to plot the graph
+## here we choose the point-line graph  better see the trend for each group and make inferences
+## adjust fonts and positions of plot title, axis title, axis text, etc.
+ggplot(merged_long,aes(x=year, y=incidence, colour=`Age Groups`))+
+  geom_point(aes(x=year, y=incidence, colour=`Age Groups`))+
   geom_line()+
   theme_classic() +
-  labs(x="Year",y="Breast Cancer incidence rate in East-Anglia per 100000 population") +
-  theme(axis.text.x = element_text(size=12, angle=20))
+  labs(title="The Breast Cancer Incidence Rates from Year 1980 to 2017 in East Anglia", x="Year",y="Breast Cancer incidence rate in East-Anglia\nper 100000 population-yrs") +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(axis.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=38, hjust=0.5)) +
+  theme(plot.subtitle = element_text(size=28, hjust=0.5)) +
+  theme(legend.title = element_text(size=20)) +
+  theme(legend.text = element_text(size=16)) +
+  theme(legend.text.align = 0.7)
 
+
+## alternatives 1 line graph
+ggplot(merged_long,aes(x=year, y=incidence, colour=`Age Groups`))+
+  geom_point(aes(x=year, y=incidence, colour=`Age Groups`))+
+  geom_point()+
+  theme_classic() +
+  labs(title="The Breast Cancer Incidence Rates from Year 1980 to 2017 in East Anglia", x="Year",y="Breast Cancer incidence rate in East-Anglia\nper 100000 population-yrs") +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(axis.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=18)) +
+  theme(plot.title = element_text(size=38, hjust=0.5)) +
+  theme(plot.subtitle = element_text(size=28, hjust=0.5)) +
+  theme(legend.title = element_text(size=20)) +
+  theme(legend.text = element_text(size=16)) +
+  theme(legend.text.align = 0.7)
 
 
