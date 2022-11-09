@@ -1,4 +1,17 @@
-mypackages <- c("tidyverse", "readxl", "Hmisc")
+#################
+
+#This is a script to calculate the breast cancer incidence in females from 1980-2017 in the east anglia region
+#This will be standardized to the European population
+#6 files are needed to run this script:
+#brca_incidence_2004_17.xlsx, European-standard-pop.xlsx, patient.csv, pop_ea_200417.csv, population.txt and tumour.tsv
+
+#################
+#Settings the working directory and installing & downloading all requires packages
+
+
+setwd("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/Assignment/Assignment files")
+
+mypackages <- c("tidyverse", "readxl", "Hmisc","lubridate", "forcats", "descr","lemon", "patchwork", "digitize","ggplot2","gridExtra","data.table", "stargazer","sjPlot", "ggnewscale")
 
 for (p in mypackages){
   if (!require(p, character.only = TRUE)) {
@@ -7,28 +20,182 @@ for (p in mypackages){
   }
 }
 
-controls <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/controls.csv")
-cases <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/cases.csv", col_names = FALSE)
 
-names(cases) <- names(controls)
-
-#pop_7117 <- bind_rows(cases, controls) -- Won't merge
-pop_7117 <- rbind(cases, controls) #turns menop into a char, so you cant sum
-
-pop_7117
-
-pop_0417 <- read_csv("C:/Users/Karee/OneDrive/Desktop/Mphil PHS/ADA module/R programming/pop_ea_200417.csv")
-
-count(cases, menop)
-
-#cases <- mutate(cases, menop = as.numeric(menop)) # wont work as there is some Y and N
-cases <- mutate(cases, menop = case_when(menop=="N" ~"1", #IN mathematical sense u need double equal
-                                          menop=="Y" ~"2",
-                                          TRUE ~menop), #KEEP EVERYTHING ELSE SAME, THIS LINE ALWAYS THERE
-                menop = as.numeric(menop))
-
-count(cases, menop)
-count(controls, menop)
-count(cases, menop) > count(controls, menop)
+#################
+#Reading the brca incidence file. Skipping first 3 rows to adjust alignment.
+#viewing the dataframe to make sure it was read properly
+#Checking the class of the columns to see if they are appropriate
+#Describing the data to check for any outliers or missing data
 
 
+BreastCases <- read_excel("brca_incidence_2004_17.xlsx",skip = 3,col_names = TRUE)                     
+#view(BreastCases)
+lapply(BreastCases, class)
+describe(BreastCases)
+
+#################
+#Reading the population text file and pop_ea CSV file. 
+#Skipping first 3 rows of population.text to adjust alignment, and naming the columns based on the guide at the top.
+#viewing the dataframes to make sure they were read properly
+#Checking the class of the columns to see if they are appropriate
+#Describing the data to check for any outliers or missing data
+
+Population1 <- read_table("population.txt", col_names = c("year", "sex", "age","population"), skip = 5)
+#view(Population1)
+lapply(Population1, class)
+describe(Population1)
+
+Population2 <- read_csv("pop_ea_200417.csv")
+#view(Population2)
+lapply(Population2, class)
+describe(Population2)
+
+
+#################
+#Reading the patient file. It was then sorted in ascending patient_number for clarity of data.
+#viewing the dataframe to make sure they it was read properly
+#Checking the class of the columns to see if they are appropriate
+#Modified class of date_of_birth to be in a more accessible format using lubridate.
+#Checking the class of the columns to ensure they have been changed
+#Describing the data to check for any outliers or missing data
+
+PatientDoB <- read_csv("patient.csv") %>% arrange(patient_number)
+#view(PatientDoB)
+lapply(PatientDoB, class)
+PatientDoB$date_of_birth <- dmy(PatientDoB$date_of_birth)
+lapply(PatientDoB, class)
+describe(PatientDoB)
+
+#################
+#Reading the Tumour file.
+#viewing the dataframe to make sure they it was read properly
+#Checking the class of the columns to see if they are appropriate
+#Modified date_of_diagnosis to be in a more accessible format using lubridate.
+#Checking the class of the columns to ensure they have been changed
+#Describing the data to check for any outliers or missing data
+
+Tumour <- read_tsv("tumour.tsv")
+#view(Tumour)
+lapply(Tumour, class)
+Tumour$date_of_diagnosis <- dmy(Tumour$date_of_diagnosis)
+lapply(Tumour, class)
+describe(PatientDoB)
+
+#################
+#Reading the European Standard Population file and saving as an object.
+#providing meaningful names to the columns, and skipping 1 row for dataframe alignment
+#viewing the dataframe to make sure they it was read properly
+#Checking the class of the columns to see if they are appropriate
+#Describing the data to check for any outliers or missing data
+
+EuroPop <- read_excel("european-standard-pop.xlsx",col_names = c("age", "europop"), skip = 1)
+#view(EuroPop)
+lapply(EuroPop, class)
+describe(EuroPop)
+
+
+#################
+#Viewing the object BreastCases to see what needs manipulating - This dataset contains an 85-89 bracket and a 90+ bracket
+#We are only interested in 85+ hence the 85-89 and the 90+ can be combined to provide an 85+ row:
+
+#Creating an 85+ row by adding all the values in the 85-89 row and the 90+ row. Columns 2-15 were selected as these are the ones with the case data we need
+#Removing rows 19 and 20, to get rid of the redundant 90+ row, as well as the grand total row
+#Removing column 16 to get rid of the Grand total column
+#Renaming the row we made as 85+ to be 85+
+#Renaming the age bands into a single numeral form, to be standard across all tables
+#Renaming the column header from Row labels to age, to be standard across all tables
+#Viewing the new data frame to ensure this was all done correctly
+
+#view(BreastCases)
+
+BreastCases[18,2:15] <- BreastCases[18,2:15] + BreastCases[19,2:15]
+BreastCases <- BreastCases[-c(19,20),]
+BreastCases <- BreastCases[,-16]
+BreastCases[18,1] <- "85+"
+BreastCases[,1] <- c(1:18)
+BreastCases <- BreastCases %>% rename(age =`Row Labels`)
+#view(BreastCases)
+
+
+
+#################
+#Converting the cleaned breast case incidence table into a long format, to standardise the format with other tables
+#Viewing the new object to make sure it has been converted succesfully
+#describing to check for any NA generated
+
+
+CasesPerAgeFrom2004 <- BreastCases %>% pivot_longer(cols = `2004`:`2017`, names_to = "year",values_to = "Freq")
+view(CasesPerAgeFrom2004)
+describe(CasesPerAgeFrom2004)
+
+
+#################
+#Viewing Population 1 to see the formatting prior to standardising
+#Rearranging the columns, putting age before sex and population before sex for the sake of clarity
+#Then filtering out all the males, as the question indicates that our target population is only females
+#Viewing the dataframe to ensure this has succeeded.
+#Filtering out population 3 to just include year, age and the population
+#Getting rid of years before 1980, as this is outside our required data range
+
+#view(Population1)
+Population1 <- Population1 %>% relocate(age, .before=sex) %>% relocate(population, .before=sex) %>% arrange(age) %>% filter(sex > 1)
+Population3 <- bind_rows(Population1, Population2) %>% arrange(year)
+view(Population3)
+Population3 <- select(Population3, c(1:3))
+Population3 <- filter(Population3, year > 1979)
+#view(Population3)
+
+
+
+
+#################
+#Merging the Patient file with the tumour file horizontally, using the patient number to align the rows
+#Relocating column orders for the sake of clarity
+#Calculating the age of patients at time of diagnosis, by substracting date of diagnosis from date of birth
+#Converting it to years by dividing the number of days by 365.24
+#Using the floor function to round down, as age is typically rounded down not up
+#Creating a new column that splits patient's age into the age bands, as used previously
+#Creating a new column which is the year of diagnosis, formatted as just the year, excluding the month and day - this is for plotting purposes------------
+#Viewing the dataframe to check all changes succeeded
+#view(TumourDoB)
+
+TumourDoB <- merge(PatientDoB, Tumour, by="patient_number") %>% 
+  relocate(date_of_diagnosis, .before=tumour_number)
+TumourDoB <- mutate(TumourDoB, ageyrs = as.numeric(floor((date_of_diagnosis - date_of_birth)/365.24))) ### which way does floor round?!?!
+TumourDoB <- mutate(TumourDoB, age = cut(ageyrs,breaks =c(0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,Inf),labels=c(1:18), right=F))#check if the cut is correct??
+
+TumourDoB <- mutate(TumourDoB, year = format(as.Date(TumourDoB$date_of_diagnosis, format="%d/%m/%Y"),"%Y"))#
+view(TumourDoB)
+
+
+#################
+#Some patients have multiple tumour numbers, after researching online, I concluded that this was an issue with the cancer Registries in the U.K, as sometimes a person is entered multiple times, or it is a recurrance of a tumour.
+#Official guidance suggests that only primary tumours should count - recurrences shouldn't. Since we have no info if the subsequent tumours are recurrences or not,
+#I decided to only keep the first tumour by date of diagnosis as this was the safest bet.
+
+#As such, this section of code arranges the date of diagnosis in ascending order
+#Then using the distinct function, we get rid of any repeats of patient ID
+#Since we sorted by ascending date of diagnosis, we are only keeping the first tumour discovered as the case
+#Viewing the dataframe after to ensure there are no duplicates
+
+
+TumourDoB <-  arrange(TumourDoB, date_of_diagnosis)
+TumourDoB <- TumourDoB %>%  distinct(patient_number, .keep_all = T)   
+view(TumourDoB)
+
+
+#################
+#I am now filtering to just include age and year columns
+#We then use this to create a new object, casesperagefrom1980 to tabulate year against age, to find the frequency of how many cases are in each strata
+#We are then merging the cases from 1980 - 2003 with the 2003-2017 to make 1 large table.
+#viewing to ensure this was done correctly
+#describing to check for any NAs
+
+
+view(TumourDoB)
+TumourDoB <- select(TumourDoB,-c(1:5))
+CasesPerAgeFrom1980 <- with(TumourDoB, table(year, age))
+#view(CasesPerAgeFrom1980)
+CasesPerAgeMerged <- rbind(CasesPerAgeFrom1980, CasesPerAgeFrom2004)
+#view(CasesPerAgeMerged)
+describe(CasesPerAgeMerged)
