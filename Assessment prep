@@ -1,0 +1,51 @@
+#R: The correlation between the observed values of the response variable
+  # and the predicted values of the response variable made by the model. 
+#R2: The proportion of the variance in the response variable 
+  # that can be explained by the predictor variables in the regression model
+
+# if no log, would have negative confidence intervals
+# log, then unlog, so we would have two positive CIs
+
+# woolf's formula for SD of the log OR
+
+# in the null hypothesis, use only english, do not introduce ratios
+# ratios are for statistical analysis
+
+# overall total is less than 20
+# overall total is b/w 20 and 40 and one of the boxes expected is less then 5
+# then use EXACT test
+# overall less thaN 40, use YATES
+
+# 2x2 table is median, and criteria
+
+# WALD's test checks if the R^2 is significantly different from 0 or not
+# tells if the independent variable has an influence
+
+# For logistic, doesn't have the concept of residual, so can't calculate r^2 and lease squares
+# use maximum likelyhood instead
+
+###Check normally distributed for both, if they are, then you F test to check variance for both, 
+###if true then normal T-test (var.equal = true), if variances are different, then welch T test (var.equal = FaLSE)>
+### ASSESSMENT TASKS
+## 1. Interpreting odds ratio
+
+## 2. Assumptions underlying logistic regressions
+
+## 3. fitting a lositic regression model using r and interpret the output
+
+## download the packages needed for assessment
+mypackages <- c("tidyverse", "readxl", "Hmisc","ggplot2","labelled")
+
+
+
+for (p in mypackages){
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+
+data2 <- data.frame(age = c(21, 30, 25, 41, 29, 33), sex = factor(c(1, 2, 1, 2, 1, 2), labels = c("Female", "Male")))
+
+data2 = labelled::set_variable_labels(data2, .labels = c("kk","vv"))
+View(data2)
