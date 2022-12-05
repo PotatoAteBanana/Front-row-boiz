@@ -1,0 +1,143 @@
+## download the packages needed for assessment
+mypackages <- c("tidyverse", "readxl", "Hmisc","lubridate","ggplot2","labelled",
+                "ggpubr","moments")
+
+
+for (p in mypackages){
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+
+## read the file
+setwd("D:/Biostat Assessment prep/Practice 12")
+tumour <- read.csv("tumours_3d.csv")
+
+View(tumour)
+
+### Test for normality
+ggdensity(tumour$days, main = "Density of days of tumour growth",xlab = "days")
+ggqqplot(tumour$days)
+shapiro.test(tumour$days) # want p > 0.05 # here its W = 0.96375, p-value = 0.007516
+# probably not normal bruh
+
+# These are used not for linear regression
+# log_tumour <- log(tumour$days)
+# ggdensity(log_tumour)
+# ggqqplot(log_tumour)
+
+## H0: The size of tumuor is independent of the days of growth
+## H1: The size of tumuor is dependent of the days of growth
+plot(x = tumour$days, y = tumour$size)
+abline(lm(size ~ days, data = tumour),
+       col = "red")
+
+par(mfrow = c(2,2))
+plot(lm(size ~ days, data = tumour))
+
+# # 1. Residual vs fitted checks the linear relationship
+#     We want a horizontal line
+# # 2. Normal Q-Q checks the normality of residuals
+#     We want a straight diagonal line
+# # 3. Scale-location checks homogenity of variance
+#     We want a horizontal line with equally spread points
+# # 4. Residuals vs leverage identifies any influencial cases
+#     We do not want any that exceed  3 standard deviations 
+
+
+
+
+# ggplot(tumour, aes(x = days, y = size)) + 
+#   geom_point() + 
+#   stat_smooth(method = "lm")
+
+### Linear regression assumptions
+# Linear relationship
+# Multivariate normality
+# No auto-correlation
+# Homoscedasticity
+
+## linear regression of days and check normality of residuals
+fit <- lm(size ~ days, data = tumour)
+tumour$sizeres <- residuals(fit)
+hist(tumour$sizeres)
+skewness(tumour$sizeres)
+kurtosis(tumour$sizeres)
+
+ggdensity(tumour$sizeres, main = "Density of size residuals",xlab = "residuals")
+ggqqplot(tumour$sizeres)
+shapiro.test(tumour$sizeres)
+
+## use squared days and check squared
+tumour$days2 <- tumour$days^2
+par(mfrow = c(2,2))
+plot(lm(size ~ days + days2, data = tumour))
+
+fit2 <- lm(size ~ days + days2, data = tumour)
+plot(fit2)
+summary(fit2)
+
+tumour$sizeres2 <- residuals(fit2)
+hist(tumour$sizeres2)
+ggdensity(tumour$sizeres2)
+qqnorm(tumour$sizeres2)
+shapiro.test(tumour$sizeres2)
+
+## square root
+tumour$rootsize <- sqrt(tumour$size)
+fit3 <- lm(rootsize ~ days, data = tumour)
+
+tumour$sqrtsizeresid <- residuals(fit3)
+
+skewness(tumour$sqrtsizeresid)
+kurtosis(tumour$sqrtsizeresid)
+
+hist(tumour$sqrtsizeresid)
+
+qqnorm(tumour$sqrtsizeresid)
+qqline(tumour$sqrtsizeresid, col = "red")
+
+shapiro.test(tumour$sqrtsizeresid)
+
+## log
+tumour$logsize <- log(tumour$size)
+fit4 <- lm(logsize ~ days, data = tumour)
+
+tumour$logsizeresid <- residuals(fit4)
+skewness(tumour$logsizeresid)
+kurtosis(tumour$logsizeresid)
+
+hist(tumour$logsizeresid)
+
+qqnorm(tumour$logsizeresid)
+qqline(tumour$logsizeresid, col = "red")
+
+shapiro.test(tumour$logsizeresid)
+
+# log and quadratic
+tumour$logsize <- log(tumour$size)
+fit6 <- lm(logsize ~ days+days^2, data = tumour)
+
+tumour$logsizeresid2 <- residuals(fit6)
+skewness(tumour$logsizeresid2)
+kurtosis(tumour$logsizeresid2)
+
+hist(tumour$logsizeresid2)
+ggdensity(tumour$logsizeresid2)
+
+qqnorm(tumour$logsizeresid2)
+qqline(tumour$logsizeresid2, col = "red")
+
+shapiro.test(tumour$logsizeresid2)
+
+par(mfrow = c(2,2))
+plot(fit6)
+
+tumour$days2 <- (tumour$days)^2
+
+fit6 <- lm(size ~ days+ days2, data = tumour)
+plot(x = tumour$days, y = tumour$size)
+abline((fit6),
+       col = "red")
+
