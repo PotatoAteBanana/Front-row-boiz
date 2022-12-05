@@ -49,3 +49,10 @@ data2 <- data.frame(age = c(21, 30, 25, 41, 29, 33), sex = factor(c(1, 2, 1, 2, 
 
 data2 = labelled::set_variable_labels(data2, .labels = c("kk","vv"))
 View(data2)
+
+
+
+
+ggdensity(TestingOpen$OperativeTime, main = "Density of Op time for Open",xlab = "Op time")
+ggqqplot(TestingOpen$OperativeTime)
+shapiro.test(TestingOpen$OperativeTime) # want p > 0.05
