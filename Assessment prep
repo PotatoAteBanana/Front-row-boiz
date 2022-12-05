@@ -56,3 +56,7 @@ View(data2)
 ggdensity(TestingOpen$OperativeTime, main = "Density of Op time for Open",xlab = "Op time")
 ggqqplot(TestingOpen$OperativeTime)
 shapiro.test(TestingOpen$OperativeTime) # want p > 0.05
+
+ggdensity(TestingOpen$OperativeTime, main = "Density of Op time for Open",xlab = "Op time")
+ggqqplot(TestingOpen$OperativeTime)
+shapiro.test(TestingOpen$OperativeTime) # want p > 0.05
