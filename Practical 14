@@ -1,5 +1,5 @@
 mypackages <- c("tidyverse", "readxl", "Hmisc","lubridate","ggplot2","labelled",
-                "ggpubr","moments")
+                "ggpubr","moments","epiDisplay")
 
 
 for (p in mypackages){
@@ -12,9 +12,64 @@ for (p in mypackages){
 ## read the file
 setwd("D:/Biostat Assessment prep/Practice 14")
 SGA <- read.csv("SGA.csv")
+SGA$parity <- as.factor(SGA$parity)
 
 fit_null<-glm(lowbirthweight~1,data=SGA,family="binomial")
+# null model, no beta, ~1 means the value of dependent variable without any control
 summary(fit_null)
 exp(coef(fit_null))
 confint(fit_null)
 exp(confint(fit_null))
+
+## gives the same as previous
+logistic.display(fit_p)
+
+
+## get contingency table and chi squared to test for association (no specific relations)
+tab_parity <- xtabs ( ~ lowbirthweight + parity , data = SGA )
+chisq.test(x=tab_parity)
+tab_parity
+
+## logistic regression b/w parity and low birth weight
+fit_p<-glm(lowbirthweight~parity,data=SGA,family="binomial")
+summary(fit_p)
+exp(coef(fit_p))
+exp(confint(fit_p))
+# exp(cbind(coef(fit_p), confint(fit_p))) same as above
+
+## parity one gives a small odds of 0.065, parity 2 gives a 0.679, with p<0.05 so significant diff
+## parity 3 has a hude odds ratio but insignificant for p>0.05
+
+## To convert from odds to a probability, divide the odds by one plus the odds.
+# extract the vector of betas
+beta_p<-coef(fit_p)
+# compute the probabilities
+exp(beta_p[1])/(1+exp(beta_p[1]))
+exp(beta_p[1]+beta_p[2])/(1+exp(beta_p[1]+beta_p[2]))
+exp(beta_p[1]+beta_p[3])/(1+exp(beta_p[1]+beta_p[3]))
+tab_parity[2,]/(tab_parity[1,]+tab_parity[2,])
+
+exp(beta_p[3])/exp(beta_p[2])
+## The odds of low birth weight is 1.844243 times higher in parity3 groups compared to those of parity 1 and 2
+
+anova(fit_null,fit_p,test="Chisq")
+
+## NEW MODEL
+fit_a<-glm(lowbirthweight~age,data=SGA,family="binomial")
+
+## calculating ODDS RATIO
+beta_a<-coef(fit_a)
+beta_a[2]
+## The log odds ratio for age is negative (equivalently, the ODDS RATIO for age is <1) 
+## and so the probability of low birth weight decreases with maternal age.
+
+summary(fit_a)
+## The p-value is 0.736 - the association is not statistically significant.
+
+# This is the odds of low birth rate for a woman of age 0. 
+# This is not a clinically meaningful number, and gives us a warning 
+# that the algebraic assumption underlying this model 
+# (that each year of increased maternal age has a multiplicative effect on 
+# the odds of low birth rate) may not be valid for extreem examples
+
+exp(30*beta_a[2])/exp(25*beta_a[2])
