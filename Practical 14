@@ -1,0 +1,20 @@
+mypackages <- c("tidyverse", "readxl", "Hmisc","lubridate","ggplot2","labelled",
+                "ggpubr","moments")
+
+
+for (p in mypackages){
+  if (!require(p, character.only = TRUE)) {
+    install.packages(p)
+    library(p, character.only = TRUE)
+  }
+}
+
+## read the file
+setwd("D:/Biostat Assessment prep/Practice 14")
+SGA <- read.csv("SGA.csv")
+
+fit_null<-glm(lowbirthweight~1,data=SGA,family="binomial")
+summary(fit_null)
+exp(coef(fit_null))
+confint(fit_null)
+exp(confint(fit_null))
